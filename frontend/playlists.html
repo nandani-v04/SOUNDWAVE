@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playlists - SoundWave</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-text">⚡ SoundWave</div><div class="logo-subtitle">Feel the rhythm</div></div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Discover</div>
+        <a href="index.html" class="nav-link">🏠 Home</a>
+        <a href="search.html" class="nav-link">🔍 Search</a>
+        <a href="player.html" class="nav-link">▶️ Now Playing</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Library</div>
+        <a href="playlists.html" class="nav-link active">📋 Playlists</a>
+        <a href="liked.html" class="nav-link">❤️ Liked Songs</a>
+        <a href="recent.html" class="nav-link">⏱ Recently Played</a>
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-card" onclick="window.location.href='profile.html'">
+        <div class="user-avatar" id="sidebar-avatar">?</div>
+        <div class="user-info"><div class="user-name" id="sidebar-name">Guest</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">My Playlists</h1>
+          <p class="page-subtitle">Your personal music collections</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateModal()">+ New Playlist</button>
+      </div>
+
+      <!-- Playlists grid -->
+      <div id="playlists-grid" class="playlist-grid">
+        <div class="loading-container"><div class="spinner"></div></div>
+      </div>
+
+      <!-- Single playlist view -->
+      <div id="playlist-detail" style="display:none">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+          <button class="btn btn-secondary btn-sm" onclick="backToPlaylists()">← Back</button>
+          <h2 class="section-title" id="detail-name"></h2>
+          <button class="btn btn-danger btn-sm" id="delete-playlist-btn">Delete</button>
+        </div>
+        <div class="song-list" id="playlist-songs"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Player bar -->
+<div class="player-bar">
+  <div class="player-song-info">
+    <div class="player-thumb" id="player-thumb">🎵</div>
+    <div>
+      <div class="player-song-title" id="player-title">No song selected</div>
+      <div class="player-song-artist" id="player-artist">—</div>
+    </div>
+    <button class="player-like-btn" id="player-like-btn" onclick="if(Player.currentSong)toggleLike(Player.currentSong._id)">🤍</button>
+  </div>
+  <div class="player-controls">
+    <div class="player-buttons">
+      <button class="ctrl-btn" id="shuffle-btn" onclick="toggleShuffle()">🔀</button>
+      <button class="ctrl-btn" onclick="playPrevious()">⏮</button>
+      <button class="play-pause-btn" id="play-pause-btn" onclick="togglePlayPause()">▶</button>
+      <button class="ctrl-btn" onclick="playNext()">⏭</button>
+      <button class="ctrl-btn" id="repeat-btn" onclick="toggleRepeat()">🔁</button>
+    </div>
+    <div class="player-progress">
+      <span class="time-label" id="time-current">0:00</span>
+      <div class="progress-bar-wrap" id="progress-bar"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+      <span class="time-label" id="time-duration">0:00</span>
+    </div>
+  </div>
+  <div class="player-right">
+    🔊 <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="80">
+  </div>
+</div>
+
+<!-- Create playlist modal -->
+<div class="modal-overlay hidden" id="create-modal">
+  <div class="modal">
+    <h3 class="modal-title">Create Playlist</h3>
+    <div class="form-group">
+      <label class="form-label">Playlist Name</label>
+      <input type="text" id="playlist-name" class="form-input" placeholder="e.g. My Favorites" maxlength="50">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description (optional)</label>
+      <input type="text" id="playlist-desc" class="form-input" placeholder="Short description..." maxlength="200">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeCreateModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="createPlaylist()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="js/api.js"></script>
+<script src="js/player.js"></script>
+<script>
+  // Check login
+  if (!Storage.isLoggedIn()) {
+    window.location.href = 'login.html';
+  }
+
+  const user = Storage.getUser();
+  if (user) {
+    document.getElementById('sidebar-name').textContent = user.name;
+    document.getElementById('sidebar-avatar').textContent = getInitials(user.name);
+  }
+
+  let currentPlaylistId = null;
+  const BG_GRADIENTS = [
+    'linear-gradient(135deg, #7c5cbf, #e05c8a)',
+    'linear-gradient(135deg, #3b82f6, #06b6d4)',
+    'linear-gradient(135deg, #10b981, #3b82f6)',
+    'linear-gradient(135deg, #f59e0b, #ef4444)',
+    'linear-gradient(135deg, #8b5cf6, #3b82f6)',
+  ];
+
+  async function loadPlaylists() {
+    try {
+      const data = await PlaylistsAPI.getAll();
+      const grid = document.getElementById('playlists-grid');
+
+      if (!data.playlists?.length) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-title">No playlists yet</div>
+            <p class="empty-state-text">Create your first playlist to get started</p>
+            <button class="btn btn-primary" style="margin-top:16px" onclick="openCreateModal()">+ Create Playlist</button>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = data.playlists.map((pl, i) => `
+        <div class="playlist-card" onclick="viewPlaylist('${pl._id}')">
+          <div class="playlist-cover" style="background:${BG_GRADIENTS[i%BG_GRADIENTS.length]}">
+            ${pl.songs?.slice(0,4).map(s => s.thumbnail
+              ? `<img src="${getImageUrl(s.thumbnail)}" style="width:50%;height:50%;object-fit:cover" alt="">` : '').join('') || '🎵'}
+            <span style="font-size:36px">${pl.songs?.length === 0 ? '🎵' : ''}</span>
+          </div>
+          <div class="playlist-name">${escapeHtml(pl.name)}</div>
+          <div class="playlist-count">${pl.songs?.length || 0} songs</div>
+        </div>
+      `).join('');
+    } catch(e) {
+      document.getElementById('playlists-grid').innerHTML = `<p style="color:var(--error)">Error: ${e.message}. Are you logged in?</p>`;
+    }
+  }
+
+  async function viewPlaylist(id) {
+    currentPlaylistId = id;
+    try {
+      const data = await PlaylistsAPI.getOne(id);
+      const pl = data.playlist;
+
+      document.getElementById('playlists-grid').style.display = 'none';
+      document.getElementById('playlist-detail').style.display = 'block';
+      document.getElementById('detail-name').textContent = pl.name;
+      document.getElementById('delete-playlist-btn').onclick = () => deletePlaylist(id);
+
+      const songsEl = document.getElementById('playlist-songs');
+      if (!pl.songs?.length) {
+        songsEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎵</div><p>No songs yet. Go to home and add songs!</p></div>`;
+        return;
+      }
+
+      songsEl.innerHTML = pl.songs.map((song, i) => `
+        <div class="song-list-item" data-song-id="${song._id}">
+          <span class="song-list-num">${i+1}</span>
+          <div class="song-list-thumb" onclick="playSong(${JSON.stringify(song).replace(/"/g,'&quot;')}, null)">${song.thumbnail ? `<img src="${getImageUrl(song.thumbnail)}" alt="">` : '🎵'}</div>
+          <div class="song-list-info" onclick="playSong(${JSON.stringify(song).replace(/"/g,'&quot;')}, ${JSON.stringify(pl.songs).replace(/"/g,'&quot;')})">
+            <div class="song-list-title">${escapeHtml(song.title)}</div>
+            <div class="song-list-artist">${escapeHtml(song.artist)}</div>
+          </div>
+          <span class="song-list-duration">${formatTime(song.duration)}</span>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="removeSong('${id}','${song._id}')" title="Remove">✕</button>
+        </div>
+      `).join('');
+    } catch(e) {
+      showToast('Error loading playlist: ' + e.message, 'error');
+    }
+  }
+
+  async function removeSong(playlistId, songId) {
+    try {
+      await PlaylistsAPI.removeSong(playlistId, songId);
+      showToast('Song removed', 'info');
+      viewPlaylist(playlistId);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  async function deletePlaylist(id) {
+    if (!confirm('Delete this playlist? This cannot be undone.')) return;
+    try {
+      await PlaylistsAPI.delete(id);
+      showToast('Playlist deleted', 'info');
+      backToPlaylists();
+      loadPlaylists();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  function backToPlaylists() {
+    document.getElementById('playlists-grid').style.display = 'grid';
+    document.getElementById('playlist-detail').style.display = 'none';
+    currentPlaylistId = null;
+  }
+
+  function openCreateModal() { document.getElementById('create-modal').classList.remove('hidden'); document.getElementById('playlist-name').focus(); }
+  function closeCreateModal() { document.getElementById('create-modal').classList.add('hidden'); }
+
+  async function createPlaylist() {
+    const name = document.getElementById('playlist-name').value.trim();
+    const desc = document.getElementById('playlist-desc').value.trim();
+    if (!name) { showToast('Please enter a playlist name', 'error'); return; }
+    try {
+      await PlaylistsAPI.create(name, desc);
+      showToast(`"${name}" created! 🎵`, 'success');
+      closeCreateModal();
+      document.getElementById('playlist-name').value = '';
+      document.getElementById('playlist-desc').value = '';
+      loadPlaylists();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // Allow pressing Enter to create playlist
+  document.getElementById('playlist-name').addEventListener('keypress', e => { if (e.key === 'Enter') createPlaylist(); });
+
+  loadPlaylists();
+</script>
+</body>
+</html>

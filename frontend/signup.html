@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - SoundWave</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="bg-mesh"></div>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-text">⚡ SoundWave</div>
+      <div class="logo-subtitle" style="text-align:center;margin-top:4px">Join the community</div>
+    </div>
+
+    <h2 class="auth-title">Create account</h2>
+    <p class="auth-subtitle">Start your free music journey today</p>
+
+    <div id="error-msg" style="display:none; background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.3); color:var(--error); padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:20px; font-size:13px;"></div>
+
+    <form id="signup-form" onsubmit="handleSignup(event)">
+
+      <div class="form-group">
+        <label class="form-label" for="name">Full Name</label>
+        <input type="text" id="name" class="form-input" placeholder="Your full name" required minlength="2">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" class="form-input" placeholder="you@example.com" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div style="position:relative">
+          <input type="password" id="password" class="form-input" placeholder="At least 6 characters" required minlength="6">
+          <button type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;"
+                  onclick="togglePwd('password')">👁</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="confirm">Confirm Password</label>
+        <input type="password" id="confirm" class="form-input" placeholder="Re-enter your password" required>
+      </div>
+
+      <!-- Password strength indicator -->
+      <div id="pwd-strength" style="margin-top:-12px;margin-bottom:16px;font-size:12px;color:var(--text-muted)"></div>
+
+      <button type="submit" class="btn btn-primary w-full" id="submit-btn">
+        Create Account
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="login.html">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="js/api.js"></script>
+<script>
+  if (Storage.isLoggedIn()) window.location.href = 'index.html';
+
+  function togglePwd(id) {
+    const input = document.getElementById(id);
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+
+  // Show password strength as user types
+  document.getElementById('password').addEventListener('input', function() {
+    const val = this.value;
+    const el = document.getElementById('pwd-strength');
+    if (!val) { el.textContent = ''; return; }
+    if (val.length < 6) { el.textContent = '🔴 Too short'; el.style.color = 'var(--error)'; }
+    else if (val.length < 10) { el.textContent = '🟡 Okay'; el.style.color = 'var(--warning)'; }
+    else { el.textContent = '🟢 Strong'; el.style.color = 'var(--success)'; }
+  });
+
+  async function handleSignup(e) {
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm').value;
+    const btn = document.getElementById('submit-btn');
+    const errorEl = document.getElementById('error-msg');
+
+    errorEl.style.display = 'none';
+
+    if (password !== confirm) {
+      errorEl.textContent = 'Passwords do not match!';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    btn.textContent = 'Creating account...';
+    btn.disabled = true;
+
+    try {
+      const data = await AuthAPI.signup(name, email, password);
+      Storage.saveUser(data.token, data.user);
+      showToast('Account created! Welcome to SoundWave 🎵', 'success');
+      setTimeout(() => { window.location.href = 'index.html'; }, 800);
+    } catch (error) {
+      errorEl.textContent = error.message;
+      errorEl.style.display = 'block';
+      btn.textContent = 'Create Account';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

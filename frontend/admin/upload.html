@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Song - SoundWave Admin</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-sidebar { width: 220px; background: var(--bg-secondary); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; height: 100vh; display: flex; flex-direction: column; z-index: 100; }
+    .admin-logo { padding: 20px; border-bottom: 1px solid var(--border); }
+    .admin-nav { flex: 1; padding: 16px 10px; }
+    .admin-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: var(--text-secondary); font-size: 13px; font-weight: 500; margin-bottom: 2px; text-decoration: none; transition: all 0.2s; }
+    .admin-nav a:hover { background: var(--bg-card); color: var(--text-primary); }
+    .admin-nav a.active { background: var(--accent-glow); color: var(--accent-light); }
+    .admin-bottom { padding: 16px 10px; border-top: 1px solid var(--border); }
+    .admin-main { margin-left: 220px; padding: 32px; flex: 1; max-width: calc(100% - 220px); }
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+    @media (max-width: 768px) { .upload-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-logo">
+      <div class="logo-text">⚡ SoundWave</div>
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px;margin-top:2px">Admin Panel</div>
+    </div>
+    <nav class="admin-nav">
+      <a href="index.html">📊 Dashboard</a>
+      <a href="upload.html" class="active">⬆️ Upload Song</a>
+      <a href="songs.html">🎵 Manage Songs</a>
+      <a href="users.html">👥 Users</a>
+    </nav>
+    <div class="admin-bottom">
+      <button class="btn btn-secondary btn-sm w-full" onclick="logout()">Sign Out</button>
+      <a href="../index.html" class="btn btn-secondary btn-sm w-full" style="margin-top:6px;display:flex">← User View</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div style="margin-bottom:32px">
+      <h1 style="font-family:var(--font-display);font-size:26px;font-weight:800">Upload Song</h1>
+      <p style="color:var(--text-secondary);font-size:13px;margin-top:4px">Add new music to the SoundWave library</p>
+    </div>
+
+    <div class="upload-grid">
+      <!-- Left: File uploads -->
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">🎵 MP3 File</h3>
+          <div class="file-upload-area" id="song-drop-zone" onclick="document.getElementById('song-file').click()"
+               ondragover="handleDragOver(event,'song-drop-zone')"
+               ondragleave="handleDragLeave('song-drop-zone')"
+               ondrop="handleDrop(event,'song-file')">
+            <div class="file-upload-icon">🎵</div>
+            <div class="file-upload-text" id="song-file-text">Click or drag to upload MP3</div>
+            <div class="file-upload-hint">Maximum size: 50MB</div>
+          </div>
+          <input type="file" id="song-file" accept=".mp3,audio/mpeg" style="display:none" onchange="handleFileSelect('song-file','song-file-text','song')">
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">🖼️ Cover Image</h3>
+          <div class="file-upload-area" id="thumb-drop-zone" onclick="document.getElementById('thumb-file').click()"
+               ondragover="handleDragOver(event,'thumb-drop-zone')"
+               ondragleave="handleDragLeave('thumb-drop-zone')"
+               ondrop="handleDrop(event,'thumb-file')">
+            <div id="thumb-preview" style="width:100%;aspect-ratio:1;max-width:200px;margin:0 auto 12px;border-radius:10px;overflow:hidden;display:none">
+              <img id="thumb-img" style="width:100%;height:100%;object-fit:cover">
+            </div>
+            <div class="file-upload-icon" id="thumb-icon">🖼️</div>
+            <div class="file-upload-text" id="thumb-file-text">Click or drag to upload cover art</div>
+            <div class="file-upload-hint">JPG, PNG, WEBP • Max 5MB</div>
+          </div>
+          <input type="file" id="thumb-file" accept="image/*" style="display:none" onchange="handleThumbnailSelect(this)">
+        </div>
+      </div>
+
+      <!-- Right: Song details form -->
+      <div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:20px">📋 Song Details</h3>
+
+          <div class="form-group">
+            <label class="form-label">Song Title *</label>
+            <input type="text" id="title" class="form-input" placeholder="e.g. Blinding Lights" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Artist Name *</label>
+            <input type="text" id="artist" class="form-input" placeholder="e.g. The Weeknd" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Genre *</label>
+            <select id="genre" class="form-input form-select">
+              <option value="">Select a genre...</option>
+              <option value="Pop">Pop</option>
+              <option value="Rock">Rock</option>
+              <option value="Hip-Hop">Hip-Hop</option>
+              <option value="R&B">R&B</option>
+              <option value="Electronic">Electronic</option>
+              <option value="Jazz">Jazz</option>
+              <option value="Classical">Classical</option>
+              <option value="Country">Country</option>
+              <option value="Reggae">Reggae</option>
+              <option value="Metal">Metal</option>
+              <option value="Indie">Indie</option>
+              <option value="Blues">Blues</option>
+              <option value="Latin">Latin</option>
+              <option value="Folk">Folk</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Custom Genre (if Other)</label>
+            <input type="text" id="genre-custom" class="form-input" placeholder="Enter custom genre">
+          </div>
+
+          <!-- Upload progress -->
+          <div id="upload-progress" style="display:none;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);margin-bottom:6px">
+              <span>Uploading...</span>
+              <span id="progress-pct">0%</span>
+            </div>
+            <div style="height:6px;background:var(--bg-card-hover);border-radius:3px;overflow:hidden">
+              <div id="upload-bar" style="height:100%;background:var(--accent-gradient);border-radius:3px;width:0%;transition:width 0.3s"></div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary w-full" id="upload-btn" onclick="uploadSong()">
+            ⬆️ Upload Song
+          </button>
+        </div>
+
+        <!-- Tips card -->
+        <div class="card" style="margin-top:16px;background:var(--accent-glow);border-color:var(--accent)">
+          <h4 style="font-size:13px;font-weight:700;color:var(--accent-light);margin-bottom:10px">💡 Upload Tips</h4>
+          <ul style="font-size:12px;color:var(--text-secondary);padding-left:16px;line-height:1.8">
+            <li>MP3 files only (max 50MB)</li>
+            <li>Square cover images look best (1:1 ratio)</li>
+            <li>Use clear, descriptive song titles</li>
+            <li>Songs are available immediately after upload</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="../js/api.js"></script>
+<script>
+  if (!Storage.isLoggedIn() || !Storage.isAdmin()) window.location.href = 'login.html';
+
+  function logout() { Storage.logout(); window.location.href = 'login.html'; }
+
+  function handleDragOver(e, zoneId) {
+    e.preventDefault();
+    document.getElementById(zoneId).classList.add('drag-over');
+  }
+
+  function handleDragLeave(zoneId) {
+    document.getElementById(zoneId).classList.remove('drag-over');
+  }
+
+  function handleDrop(e, inputId) {
+    e.preventDefault();
+    const zone = e.currentTarget;
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    // Set file on the input
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById(inputId).files = dt.files;
+    if (inputId === 'song-file') handleFileSelect('song-file', 'song-file-text', 'song');
+    if (inputId === 'thumb-file') handleThumbnailSelect(document.getElementById('thumb-file'));
+  }
+
+  function handleFileSelect(inputId, textId, type) {
+    const file = document.getElementById(inputId).files[0];
+    if (!file) return;
+    document.getElementById(textId).textContent = `✅ ${file.name} (${(file.size/1024/1024).toFixed(1)}MB)`;
+    document.getElementById(inputId.replace('-file','-drop-zone')).style.borderColor = 'var(--success)';
+  }
+
+  function handleThumbnailSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('thumb-file-text').textContent = `✅ ${file.name}`;
+    document.getElementById('thumb-icon').style.display = 'none';
+    const preview = document.getElementById('thumb-preview');
+    const img = document.getElementById('thumb-img');
+    preview.style.display = 'block';
+    img.src = URL.createObjectURL(file);
+    document.getElementById('thumb-drop-zone').style.borderColor = 'var(--success)';
+  }
+
+  async function uploadSong() {
+    const songFile = document.getElementById('song-file').files[0];
+    const thumbFile = document.getElementById('thumb-file').files[0];
+    const title = document.getElementById('title').value.trim();
+    const artist = document.getElementById('artist').value.trim();
+    const genreSelect = document.getElementById('genre').value;
+    const genreCustom = document.getElementById('genre-custom').value.trim();
+    const genre = genreSelect === 'Other' ? genreCustom : genreSelect;
+
+    if (!songFile) { showToast('Please select an MP3 file', 'error'); return; }
+    if (!title) { showToast('Please enter a song title', 'error'); return; }
+    if (!artist) { showToast('Please enter an artist name', 'error'); return; }
+    if (!genre) { showToast('Please select a genre', 'error'); return; }
+
+    // Build FormData
+    const formData = new FormData();
+    formData.append('song', songFile);
+    if (thumbFile) formData.append('thumbnail', thumbFile);
+    formData.append('title', title);
+    formData.append('artist', artist);
+    formData.append('genre', genre);
+
+    const btn = document.getElementById('upload-btn');
+    const progressDiv = document.getElementById('upload-progress');
+    const bar = document.getElementById('upload-bar');
+    const pct = document.getElementById('progress-pct');
+
+    btn.disabled = true;
+    btn.textContent = 'Uploading...';
+    progressDiv.style.display = 'block';
+
+    // Fake progress animation while uploading
+    let prog = 0;
+    const progInterval = setInterval(() => {
+      prog = Math.min(prog + Math.random() * 15, 90);
+      bar.style.width = prog + '%';
+      pct.textContent = Math.round(prog) + '%';
+    }, 300);
+
+    try {
+      const data = await AdminAPI.uploadSong(formData);
+
+      clearInterval(progInterval);
+      bar.style.width = '100%';
+      pct.textContent = '100%';
+
+      showToast(`"${title}" uploaded successfully! 🎵`, 'success');
+
+      // Reset form after 1 second
+      setTimeout(() => {
+        document.getElementById('title').value = '';
+        document.getElementById('artist').value = '';
+        document.getElementById('genre').value = '';
+        document.getElementById('genre-custom').value = '';
+        document.getElementById('song-file').value = '';
+        document.getElementById('thumb-file').value = '';
+        document.getElementById('song-file-text').textContent = 'Click or drag to upload MP3';
+        document.getElementById('thumb-file-text').textContent = 'Click or drag to upload cover art';
+        document.getElementById('thumb-preview').style.display = 'none';
+        document.getElementById('thumb-icon').style.display = 'block';
+        document.getElementById('song-drop-zone').style.borderColor = '';
+        document.getElementById('thumb-drop-zone').style.borderColor = '';
+        progressDiv.style.display = 'none';
+        bar.style.width = '0%';
+        btn.disabled = false;
+        btn.textContent = '⬆️ Upload Song';
+      }, 1500);
+
+    } catch(e) {
+      clearInterval(progInterval);
+      showToast('Upload failed: ' + e.message, 'error');
+      progressDiv.style.display = 'none';
+      btn.disabled = false;
+      btn.textContent = '⬆️ Upload Song';
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Users - SoundWave Admin</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-sidebar { width: 220px; background: var(--bg-secondary); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; height: 100vh; display: flex; flex-direction: column; z-index: 100; }
+    .admin-logo { padding: 20px; border-bottom: 1px solid var(--border); }
+    .admin-nav { flex: 1; padding: 16px 10px; }
+    .admin-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: var(--text-secondary); font-size: 13px; font-weight: 500; margin-bottom: 2px; text-decoration: none; transition: all 0.2s; }
+    .admin-nav a:hover { background: var(--bg-card); color: var(--text-primary); }
+    .admin-nav a.active { background: var(--accent-glow); color: var(--accent-light); }
+    .admin-bottom { padding: 16px 10px; border-top: 1px solid var(--border); }
+    .admin-main { margin-left: 220px; padding: 32px; flex: 1; }
+    .table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-logo">
+      <div class="logo-text">⚡ SoundWave</div>
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px;margin-top:2px">Admin Panel</div>
+    </div>
+    <nav class="admin-nav">
+      <a href="index.html">📊 Dashboard</a>
+      <a href="upload.html">⬆️ Upload Song</a>
+      <a href="songs.html">🎵 Manage Songs</a>
+      <a href="users.html" class="active">👥 Users</a>
+    </nav>
+    <div class="admin-bottom">
+      <button class="btn btn-secondary btn-sm w-full" onclick="logout()">Sign Out</button>
+      <a href="../index.html" class="btn btn-secondary btn-sm w-full" style="margin-top:6px;display:flex">← User View</a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <h1 style="font-family:var(--font-display);font-size:26px;font-weight:800">Users</h1>
+        <p style="color:var(--text-secondary);font-size:13px;margin-top:4px" id="users-count">Loading...</p>
+      </div>
+      <div class="search-bar" style="max-width:250px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Filter users..." oninput="filterUsers(this.value)">
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>User</th>
+            <th>Email</th>
+            <th>Liked Songs</th>
+            <th>Playlists</th>
+            <th>Joined</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:32px"><div class="spinner" style="margin:0 auto"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="../js/api.js"></script>
+<script>
+  if (!Storage.isLoggedIn() || !Storage.isAdmin()) window.location.href = 'login.html';
+
+  function logout() { Storage.logout(); window.location.href = 'login.html'; }
+
+  let allUsers = [];
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function getInitials(name) {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  async function loadUsers() {
+    try {
+      const data = await AdminAPI.getAllUsers();
+      allUsers = data.users || [];
+      document.getElementById('users-count').textContent = `${allUsers.length} registered users`;
+      renderUsers(allUsers);
+    } catch(e) {
+      document.getElementById('users-tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--error);padding:24px">${e.message}</td></tr>`;
+    }
+  }
+
+  function renderUsers(users) {
+    const tbody = document.getElementById('users-tbody');
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px">No users found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map((user, i) => `
+      <tr>
+        <td style="color:var(--text-muted)">${i+1}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden">
+              ${user.profilePicture ? `<img src="http://localhost:5000${user.profilePicture}" style="width:100%;height:100%;object-fit:cover" alt="">` : getInitials(user.name)}
+            </div>
+            <span style="font-weight:500;font-size:13px">${escapeHtml(user.name)}</span>
+          </div>
+        </td>
+        <td style="color:var(--text-secondary);font-size:13px">${escapeHtml(user.email)}</td>
+        <td style="font-size:13px">${user.likedSongs?.length || 0} ❤️</td>
+        <td style="font-size:13px">—</td>
+        <td style="color:var(--text-muted);font-size:12px">${new Date(user.createdAt).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+  }
+
+  function filterUsers(q) {
+    if (!q.trim()) { renderUsers(allUsers); return; }
+    const ql = q.toLowerCase();
+    renderUsers(allUsers.filter(u => u.name?.toLowerCase().includes(ql) || u.email?.toLowerCase().includes(ql)));
+  }
+
+  loadUsers();
+</script>
+</body>
+</html>

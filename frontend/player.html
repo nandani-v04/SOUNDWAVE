@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Now Playing - SoundWave</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .player-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - var(--player-height)); padding: 32px; }
+    .player-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 28px; padding: 40px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 24px 80px rgba(0,0,0,0.5); }
+    .big-album-art { width: 260px; height: 260px; border-radius: 20px; margin: 0 auto 28px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-size: 80px; overflow: hidden; box-shadow: 0 20px 60px rgba(124,92,191,0.3); transition: transform 0.3s ease; }
+    .big-album-art.spinning { animation: slowSpin 20s linear infinite; }
+    .big-album-art img { width:100%;height:100%;object-fit:cover; }
+    @keyframes slowSpin { to { transform: rotate(360deg); } }
+    .big-song-title { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+    .big-song-artist { color: var(--text-secondary); font-size: 16px; margin-bottom: 24px; }
+    .big-controls { display: flex; align-items: center; justify-content: center; gap: 24px; margin: 28px 0 20px; }
+    .big-play-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--accent-gradient); color: white; font-size: 26px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px var(--accent-glow); transition: transform 0.2s; }
+    .big-play-btn:hover { transform: scale(1.08); }
+    .big-ctrl-btn { background: none; border: none; color: var(--text-secondary); font-size: 22px; cursor: pointer; padding: 8px; border-radius: 50%; transition: var(--transition); }
+    .big-ctrl-btn:hover { color: var(--text-primary); background: var(--bg-card-hover); }
+    .big-ctrl-btn.active { color: var(--accent-light); }
+    .big-progress { margin: 12px 0 4px; }
+    .big-time-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+    .queue-section { margin-top: 12px; }
+    .add-playlist-btn { margin-top: 20px; }
+    .song-meta-tags { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+
+<div class="app-layout">
+  <!-- Sidebar (same as index.html) -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">⚡ SoundWave</div>
+      <div class="logo-subtitle">Feel the rhythm</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">Discover</div>
+        <a href="index.html" class="nav-link">🏠 Home</a>
+        <a href="search.html" class="nav-link">🔍 Search</a>
+        <a href="player.html" class="nav-link active">▶️ Now Playing</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Library</div>
+        <a href="playlists.html" class="nav-link">📋 Playlists</a>
+        <a href="liked.html" class="nav-link">❤️ Liked Songs</a>
+        <a href="recent.html" class="nav-link">⏱ Recently Played</a>
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-card" onclick="window.location.href='profile.html'">
+        <div class="user-avatar" id="sidebar-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebar-name">Guest</div>
+          <div class="user-role" id="sidebar-role">-</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="player-page">
+      <div class="player-card">
+        <!-- Album art -->
+        <div class="big-album-art" id="big-album-art">🎵</div>
+
+        <!-- Song info -->
+        <div class="big-song-title" id="big-title">No song selected</div>
+        <div class="big-song-artist" id="big-artist">Pick a song from Home</div>
+
+        <!-- Genre + play count tags -->
+        <div class="song-meta-tags" id="song-meta-tags"></div>
+
+        <!-- Like + Add to playlist row -->
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px">
+          <button class="btn btn-secondary btn-sm" id="big-like-btn" onclick="likeCurrentSong()">🤍 Like</button>
+          <button class="btn btn-secondary btn-sm" onclick="showAddToPlaylist()">+ Playlist</button>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="big-progress">
+          <div class="progress-bar-wrap" id="progress-bar" style="height:5px">
+            <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+          </div>
+          <div class="big-time-row">
+            <span id="time-current">0:00</span>
+            <span id="time-duration">0:00</span>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="big-controls">
+          <button class="big-ctrl-btn" id="shuffle-btn" onclick="toggleShuffle()" title="Shuffle">🔀</button>
+          <button class="big-ctrl-btn" onclick="playPrevious()" title="Previous">⏮</button>
+          <button class="big-play-btn" id="play-pause-btn" onclick="togglePlayPause()">▶</button>
+          <button class="big-ctrl-btn" onclick="playNext()" title="Next">⏭</button>
+          <button class="big-ctrl-btn" id="repeat-btn" onclick="toggleRepeat()" title="Repeat">🔁</button>
+        </div>
+
+        <!-- Volume -->
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+          <span style="font-size:14px">🔈</span>
+          <input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="80" style="flex:1">
+          <span style="font-size:14px">🔊</span>
+        </div>
+
+        <!-- Queue section -->
+        <div class="queue-section">
+          <div style="text-align:left;margin-top:24px;margin-bottom:12px;">
+            <h3 class="section-title" style="font-size:15px">Up Next</h3>
+          </div>
+          <div id="queue-list" class="song-list" style="max-height:200px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Player bar (same as index) -->
+<div class="player-bar">
+  <div class="player-song-info">
+    <div class="player-thumb" id="player-thumb">🎵</div>
+    <div>
+      <div class="player-song-title" id="player-title">No song selected</div>
+      <div class="player-song-artist" id="player-artist">—</div>
+    </div>
+    <button class="player-like-btn" id="player-like-btn" onclick="likeCurrentSong()">🤍</button>
+  </div>
+  <div class="player-controls">
+    <div class="player-buttons">
+      <button class="ctrl-btn" id="shuffle-btn2" onclick="toggleShuffle()">🔀</button>
+      <button class="ctrl-btn" onclick="playPrevious()">⏮</button>
+      <button class="play-pause-btn" id="play-pause-btn2" onclick="togglePlayPause()">▶</button>
+      <button class="ctrl-btn" onclick="playNext()">⏭</button>
+      <button class="ctrl-btn" id="repeat-btn2" onclick="toggleRepeat()">🔁</button>
+    </div>
+    <div class="player-progress">
+      <span class="time-label" id="time-current2">0:00</span>
+      <div class="progress-bar-wrap" id="progress-bar2"><div class="progress-bar-fill" id="progress-fill2" style="width:0%"></div></div>
+      <span class="time-label" id="time-duration2">0:00</span>
+    </div>
+  </div>
+  <div class="player-right">
+    🔊 <input type="range" class="volume-slider" id="volume-slider2" min="0" max="100" value="80">
+  </div>
+</div>
+
+<!-- Add to playlist modal -->
+<div class="modal-overlay hidden" id="playlist-modal">
+  <div class="modal">
+    <h3 class="modal-title">Add to Playlist</h3>
+    <div id="playlist-modal-list" style="max-height:280px;overflow-y:auto"></div>
+    <div style="margin-top:16px;display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="window.location.href='playlists.html'">+ New</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="js/api.js"></script>
+<script src="js/player.js"></script>
+<script>
+  // Setup user in sidebar
+  const user = Storage.getUser();
+  if (user) {
+    document.getElementById('sidebar-name').textContent = user.name;
+    document.getElementById('sidebar-role').textContent = user.role;
+    document.getElementById('sidebar-avatar').textContent = getInitials(user.name);
+    if (user.profilePicture) {
+      document.getElementById('sidebar-avatar').innerHTML = `<img src="${getImageUrl(user.profilePicture)}" alt="${user.name}">`;
+    }
+  }
+
+  // Override updatePlayerUI to also update the big player card
+  const origUpdatePlayerUI = updatePlayerUI;
+  updatePlayerUI = function(song) {
+    origUpdatePlayerUI(song);
+    // Update big player card
+    document.getElementById('big-title').textContent = song.title;
+    document.getElementById('big-artist').textContent = song.artist;
+
+    const bigArt = document.getElementById('big-album-art');
+    if (song.thumbnail) {
+      bigArt.innerHTML = `<img src="${getImageUrl(song.thumbnail)}" alt="${song.title}">`;
+      bigArt.classList.remove('spinning');
+    } else {
+      bigArt.innerHTML = '🎵';
+      bigArt.classList.add('spinning');
+    }
+
+    // Meta tags
+    document.getElementById('song-meta-tags').innerHTML = `
+      <span class="badge badge-accent">${escapeHtml(song.genre)}</span>
+      <span class="badge" style="background:var(--bg-card-hover);color:var(--text-secondary)">▶ ${formatNumber(song.playCount)} plays</span>
+    `;
+
+    // Big like button
+    const bigLike = document.getElementById('big-like-btn');
+    if (bigLike) bigLike.textContent = Player.likedSongs.has(song._id) ? '❤️ Liked' : '🤍 Like';
+
+    // Update queue display
+    renderQueue();
+  };
+
+  // Also sync the duplicate progress bar and time on player bar
+  Player.audio.addEventListener('timeupdate', () => {
+    const pct = Player.audio.duration ? (Player.audio.currentTime / Player.audio.duration) * 100 : 0;
+    const fill2 = document.getElementById('progress-fill2');
+    const cur2 = document.getElementById('time-current2');
+    if (fill2) fill2.style.width = pct + '%';
+    if (cur2) cur2.textContent = formatTime(Player.audio.currentTime);
+  });
+  Player.audio.addEventListener('loadedmetadata', () => {
+    const dur2 = document.getElementById('time-duration2');
+    if (dur2) dur2.textContent = formatTime(Player.audio.duration);
+  });
+
+  // Sync volume slider 2
+  const vs2 = document.getElementById('volume-slider2');
+  if (vs2) {
+    vs2.value = Player.volume * 100;
+    vs2.addEventListener('input', e => {
+      Player.volume = e.target.value / 100;
+      Player.audio.volume = Player.volume;
+      document.getElementById('volume-slider').value = e.target.value;
+    });
+  }
+
+  function renderQueue() {
+    const queueEl = document.getElementById('queue-list');
+    if (!queueEl || !Player.queue.length) {
+      queueEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">No queue yet</p>';
+      return;
+    }
+
+    const upcoming = Player.queue.slice(Player.currentIndex + 1, Player.currentIndex + 6);
+    if (upcoming.length === 0) {
+      queueEl.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px">End of queue</p>';
+      return;
+    }
+
+    queueEl.innerHTML = upcoming.map((song, i) => `
+      <div class="song-list-item" onclick="playSong(Player.queue[${Player.currentIndex + 1 + i}], null)">
+        <span class="song-list-num">${Player.currentIndex + 2 + i}</span>
+        <div class="song-list-thumb">${song.thumbnail ? `<img src="${getImageUrl(song.thumbnail)}" alt="">` : '🎵'}</div>
+        <div class="song-list-info">
+          <div class="song-list-title">${escapeHtml(song.title)}</div>
+          <div class="song-list-artist">${escapeHtml(song.artist)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function likeCurrentSong() {
+    if (Player.currentSong) {
+      toggleLike(Player.currentSong._id).then(() => {
+        const bigLike = document.getElementById('big-like-btn');
+        if (bigLike) bigLike.textContent = Player.likedSongs.has(Player.currentSong._id) ? '❤️ Liked' : '🤍 Like';
+      });
+    }
+  }
+
+  async function showAddToPlaylist() {
+    if (!Storage.isLoggedIn()) { showToast('Please log in first!', 'info'); return; }
+    document.getElementById('playlist-modal').classList.remove('hidden');
+    try {
+      const data = await PlaylistsAPI.getAll();
+      const list = document.getElementById('playlist-modal-list');
+      if (!data.playlists?.length) {
+        list.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px">No playlists yet!</p>';
+        return;
+      }
+      list.innerHTML = data.playlists.map(pl => `
+        <div class="song-list-item" onclick="addToPlaylist('${pl._id}')">
+          <div class="song-list-thumb">📋</div>
+          <div class="song-list-info">
+            <div class="song-list-title">${escapeHtml(pl.name)}</div>
+            <div class="song-list-artist">${pl.songs.length} songs</div>
+          </div>
+        </div>
+      `).join('');
+    } catch(e) { showToast('Error loading playlists', 'error'); }
+  }
+
+  async function addToPlaylist(plId) {
+    if (!Player.currentSong) return;
+    try {
+      await PlaylistsAPI.addSong(plId, Player.currentSong._id);
+      showToast('Added to playlist! 🎵', 'success');
+      closeModal();
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  function closeModal() {
+    document.getElementById('playlist-modal').classList.add('hidden');
+  }
+
+  // If a song is already playing, render it
+  if (Player.currentSong) {
+    updatePlayerUI(Player.currentSong);
+  }
+
+  renderQueue();
+</script>
+</body>
+</html>

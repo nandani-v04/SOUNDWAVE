@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - SoundWave</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .admin-layout { display: flex; min-height: 100vh; }
+    .admin-sidebar { width: 220px; background: var(--bg-secondary); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; height: 100vh; display: flex; flex-direction: column; z-index: 100; }
+    .admin-logo { padding: 20px; border-bottom: 1px solid var(--border); }
+    .admin-nav { flex: 1; padding: 16px 10px; }
+    .admin-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: var(--text-secondary); font-size: 13px; font-weight: 500; margin-bottom: 2px; text-decoration: none; transition: all 0.2s; }
+    .admin-nav a:hover { background: var(--bg-card); color: var(--text-primary); }
+    .admin-nav a.active { background: var(--accent-glow); color: var(--accent-light); }
+    .admin-bottom { padding: 16px 10px; border-top: 1px solid var(--border); }
+    .admin-main { margin-left: 220px; padding: 32px; flex: 1; }
+    .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+    .admin-title { font-family: var(--font-display); font-size: 26px; font-weight: 800; }
+    .admin-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .recent-songs-table { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  </style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+
+<div class="admin-layout">
+  <!-- Admin Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-logo">
+      <div class="logo-text">⚡ SoundWave</div>
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px;margin-top:2px">Admin Panel</div>
+    </div>
+
+    <nav class="admin-nav">
+      <a href="index.html" class="active">📊 Dashboard</a>
+      <a href="upload.html">⬆️ Upload Song</a>
+      <a href="songs.html">🎵 Manage Songs</a>
+      <a href="users.html">👥 Users</a>
+    </nav>
+
+    <div class="admin-bottom">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg-card);border-radius:8px;margin-bottom:10px">
+        <div class="user-avatar" id="admin-avatar" style="width:34px;height:34px;font-size:13px">A</div>
+        <div>
+          <div style="font-size:13px;font-weight:600" id="admin-name">Admin</div>
+          <div style="font-size:11px;color:var(--accent-light)">Administrator</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm w-full" onclick="logout()">Sign Out</button>
+      <a href="../index.html" class="btn btn-secondary btn-sm w-full" style="margin-top:6px;display:flex">← User View</a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div>
+        <h1 class="admin-title">Dashboard</h1>
+        <p class="admin-subtitle" id="greeting">Welcome back!</p>
+      </div>
+      <a href="upload.html" class="btn btn-primary">+ Upload Song</a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">🎵</div>
+        <div class="stat-value" id="stat-songs">...</div>
+        <div class="stat-label">Total Songs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="stat-users">...</div>
+        <div class="stat-label">Total Users</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">▶️</div>
+        <div class="stat-value" id="stat-plays">...</div>
+        <div class="stat-label">Total Plays</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="window.location.href='upload.html'">
+        <div class="stat-icon">⬆️</div>
+        <div class="stat-value" style="font-size:20px">Upload</div>
+        <div class="stat-label">Add new song</div>
+      </div>
+    </div>
+
+    <!-- Recent Uploads -->
+    <div style="margin-bottom:28px">
+      <div class="section-header" style="margin-bottom:16px">
+        <h2 class="section-title">Recent Uploads</h2>
+        <a href="songs.html" class="see-all-btn">Manage all →</a>
+      </div>
+      <div class="recent-songs-table">
+        <table class="data-table" id="recent-table">
+          <thead>
+            <tr>
+              <th>Song</th>
+              <th>Artist</th>
+              <th>Genre</th>
+              <th>Plays</th>
+              <th>Uploaded</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="recent-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:24px"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick stats chart (visual bar) -->
+    <div class="card">
+      <h3 style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:16px">Top Songs by Plays</h3>
+      <div id="top-songs-chart"></div>
+    </div>
+  </main>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="../js/api.js"></script>
+<script>
+  // Guard: only admins can see this page
+  if (!Storage.isLoggedIn() || !Storage.isAdmin()) {
+    window.location.href = 'login.html';
+  }
+
+  const user = Storage.getUser();
+  if (user) {
+    document.getElementById('admin-name').textContent = user.name;
+    document.getElementById('admin-avatar').textContent = getInitials(user.name);
+    document.getElementById('greeting').textContent = `Welcome back, ${user.name}!`;
+  }
+
+  function logout() {
+    Storage.logout();
+    window.location.href = 'login.html';
+  }
+
+  async function loadDashboard() {
+    try {
+      const data = await AdminAPI.getStats();
+      const { totalUsers, totalSongs, totalPlays, recentSongs } = data.stats;
+
+      document.getElementById('stat-songs').textContent = formatNumber(totalSongs);
+      document.getElementById('stat-users').textContent = formatNumber(totalUsers);
+      document.getElementById('stat-plays').textContent = formatNumber(totalPlays);
+
+      // Render recent songs table
+      const tbody = document.getElementById('recent-tbody');
+      if (!recentSongs?.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">No songs uploaded yet</td></tr>';
+      } else {
+        tbody.innerHTML = recentSongs.map(song => `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;background:var(--bg-card-hover);flex-shrink:0;display:flex;align-items:center;justify-content:center">
+                  ${song.thumbnail ? `<img src="http://localhost:5000${song.thumbnail}" style="width:100%;height:100%;object-fit:cover">` : '🎵'}
+                </div>
+                <span style="font-weight:500">${escapeHtml(song.title)}</span>
+              </div>
+            </td>
+            <td style="color:var(--text-secondary)">${escapeHtml(song.artist)}</td>
+            <td><span class="badge badge-accent">${escapeHtml(song.genre)}</span></td>
+            <td style="color:var(--text-secondary)">${formatNumber(song.playCount)}</td>
+            <td style="color:var(--text-muted);font-size:12px">${new Date(song.createdAt).toLocaleDateString()}</td>
+            <td>
+              <a href="songs.html" class="btn btn-secondary btn-sm">Manage</a>
+            </td>
+          </tr>
+        `).join('');
+      }
+    } catch(e) {
+      showToast('Error loading dashboard: ' + e.message, 'error');
+    }
+
+    // Load top songs for chart
+    try {
+      const data = await AdminAPI.getAllSongs();
+      const top = (data.songs || []).sort((a,b) => b.playCount - a.playCount).slice(0, 8);
+      const maxPlays = top[0]?.playCount || 1;
+
+      const chartEl = document.getElementById('top-songs-chart');
+      if (!top.length) {
+        chartEl.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px">No data yet</p>';
+        return;
+      }
+
+      chartEl.innerHTML = top.map(song => `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:140px;flex-shrink:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-secondary)">${escapeHtml(song.title)}</div>
+          <div style="flex:1;height:8px;background:var(--bg-card-hover);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${Math.round((song.playCount/maxPlays)*100)}%;background:var(--accent-gradient);border-radius:4px;transition:width 0.8s ease;min-width:${song.playCount > 0 ? '4px' : '0'}"></div>
+          </div>
+          <div style="width:50px;text-align:right;font-size:12px;color:var(--text-muted)">${formatNumber(song.playCount)}</div>
+        </div>
+      `).join('');
+    } catch(e) {}
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

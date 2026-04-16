@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - SoundWave</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="bg-mesh"></div>
+
+<!-- Decorative music notes floating in background -->
+<div style="position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0">
+  <div style="position:absolute;top:10%;left:5%;font-size:60px;opacity:0.04;transform:rotate(-20deg)">🎵</div>
+  <div style="position:absolute;top:40%;right:8%;font-size:80px;opacity:0.04;transform:rotate(15deg)">🎸</div>
+  <div style="position:absolute;bottom:15%;left:10%;font-size:50px;opacity:0.04;transform:rotate(10deg)">🎹</div>
+  <div style="position:absolute;top:70%;right:20%;font-size:70px;opacity:0.03;transform:rotate(-10deg)">🎶</div>
+</div>
+
+<div class="auth-page">
+  <div class="auth-card" style="position:relative;z-index:1">
+
+    <!-- Logo -->
+    <div class="auth-logo">
+      <div class="logo-text">⚡ SoundWave</div>
+      <div class="logo-subtitle" style="text-align:center;margin-top:4px">Your music, your world</div>
+    </div>
+
+    <h2 class="auth-title">Welcome back!</h2>
+    <p class="auth-subtitle">Sign in to continue your musical journey</p>
+
+    <!-- Error message -->
+    <div id="error-msg" style="display:none; background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.3); color: var(--error); padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-size: 13px;"></div>
+
+    <!-- Login form -->
+    <form id="login-form" onsubmit="handleLogin(event)">
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" class="form-input"
+               placeholder="you@example.com" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div style="position:relative">
+          <input type="password" id="password" class="form-input"
+                 placeholder="Enter your password" required autocomplete="current-password">
+          <button type="button"
+                  style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;"
+                  onclick="togglePasswordVisibility('password')">👁</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full" id="submit-btn" style="margin-top:4px">
+        Sign In
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Don't have an account? <a href="signup.html">Sign up for free</a>
+    </div>
+
+    <!-- Admin login shortcut -->
+    <div class="divider" style="margin-top: 20px">or</div>
+    <button class="btn btn-secondary w-full btn-sm" onclick="window.location.href='admin/login.html'">
+      🔐 Admin Login
+    </button>
+
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script src="js/api.js"></script>
+<script>
+  // Redirect if already logged in
+  if (Storage.isLoggedIn()) {
+    window.location.href = 'index.html';
+  }
+
+  function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('submit-btn');
+    const errorEl = document.getElementById('error-msg');
+
+    // Show loading state on button
+    btn.textContent = 'Signing in...';
+    btn.disabled = true;
+    errorEl.style.display = 'none';
+
+    try {
+      const data = await AuthAPI.login(email, password);
+
+      // Save user data to local storage
+      Storage.saveUser(data.token, data.user);
+
+      showToast(`Welcome back, ${data.user.name}! 🎵`, 'success');
+
+      // Redirect admin to admin panel, others to home
+      setTimeout(() => {
+        if (data.user.role === 'admin') {
+          window.location.href = 'admin/index.html';
+        } else {
+          window.location.href = 'index.html';
+        }
+      }, 800);
+
+    } catch (error) {
+      errorEl.textContent = error.message;
+      errorEl.style.display = 'block';
+      btn.textContent = 'Sign In';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
